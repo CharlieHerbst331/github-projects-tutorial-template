@@ -1,0 +1,99 @@
+name: Update Tutorial
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Determine current step
+        id: current_step
+        run: |
+          current_step=$(tail -n 1 README.md | sed -n 's/<!-- STEP: \([0-9]\+\) -->/\1/p')
+          echo "CURRENT_STEP=$current_step" >> $GITHUB_ENV
+
+      - name: Get project state
+        id: project_state
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const query = `
+              query($owner: String!, $repo: String!) {
+                repository(owner: $owner, name: $repo) {
+                  projectsV2(first: 10, query: "title:\\"My Learning Project\\"") {
+                    nodes {
+                      id
+                      title
+                    }
+                  }
+                }
+              }
+            `;
+            const variables = {
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            };
+            const result = await github.graphql(query, variables);
+            const projects = result.repository.projectsV2.nodes;
+            if (projects.length === 0) {
+              core.setOutput('target_step', '1');
+            } else {
+              const projectId = projects[0].id;
+              const fieldsQuery = `
+                query($projectId: ID!) {
+                  node(id: $projectId) {
+                    ... on ProjectV2 {
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2Field {
+                            name
+                            dataType
+                          }
+                          ... on ProjectV2SingleSelectField {
+                            name
+                            options {
+                              name
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `;
+              const fieldsResult = await github.graphql(fieldsQuery, { projectId });
+              const fields = fieldsResult.node.fields.nodes;
+              let hasPriority = false;
+              let hasEffort = false;
+              for (const field of fields) {
+                if (field.name === 'Priority' && field.__typename === 'ProjectV2SingleSelectField') {
+                  const options = field.options.map(opt => opt.name);
+                  if (options.includes('High') && options.includes('Medium') && options.includes('Low')) {
+                    hasPriority = true;
+                  }
+                } else if (field.name === 'Effort' && field.dataType === 'NUMBER') {
+                  hasEffort = true;
+                }
+              }
+              if (hasPriority && hasEffort) {
+                core.setOutput('target_step', '3');
+              } else {
+                core.setOutput('target_step', '2');
+              }
+            }
+
+      - name: Update README if necessary
+        run: |
+          target_step=${{ steps.project_state.outputs.target_step }}
+          current_step=${{ env.CURRENT_STEP }}
+          if [ -z "$current_step" ] || [ "$current_step" != "$target_step" ]; then
+            cp steps/step${target_step}.md README.md
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add README.md
+            git commit -m "Update README to step ${target_step}"
+            git push
+          fi
