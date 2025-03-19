@@ -8,12 +8,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Need full history for proper branch handling
 
       - name: Determine current step
         id: current_step
         run: |
-          current_step=$(tail -n 1 README.md | sed -n 's/<!-- STEP: \([0-9]\+\) -->/\1/p')
+          current_step=$(grep -o "<!-- STEP: [0-9]\+ -->" README.md | sed -n 's/<!-- STEP: \([0-9]\+\) -->/\1/p' || echo "0")
           echo "CURRENT_STEP=$current_step" >> $GITHUB_ENV
+          echo "Current step: $current_step"
 
       - name: Get project state
         id: project_state
@@ -36,11 +39,16 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo
             };
-            const result = await github.graphql(query, variables);
-            const projects = result.repository.projectsV2.nodes;
-            if (projects.length === 0) {
-              core.setOutput('target_step', '1');
-            } else {
+            
+            try {
+              const result = await github.graphql(query, variables);
+              const projects = result.repository.projectsV2.nodes;
+              
+              if (projects.length === 0) {
+                core.setOutput('target_step', '1');
+                return;
+              }
+              
               const projectId = projects[0].id;
               const fieldsQuery = `
                 query($projectId: ID!) {
@@ -64,10 +72,13 @@ jobs:
                   }
                 }
               `;
+              
               const fieldsResult = await github.graphql(fieldsQuery, { projectId });
               const fields = fieldsResult.node.fields.nodes;
+              
               let hasPriority = false;
               let hasEffort = false;
+              
               for (const field of fields) {
                 if (field.name === 'Priority' && field.__typename === 'ProjectV2SingleSelectField') {
                   const options = field.options.map(opt => opt.name);
@@ -78,22 +89,32 @@ jobs:
                   hasEffort = true;
                 }
               }
+              
               if (hasPriority && hasEffort) {
                 core.setOutput('target_step', '3');
               } else {
                 core.setOutput('target_step', '2');
               }
+            } catch (error) {
+              console.error('Error checking project state:', error);
+              core.setOutput('target_step', '1'); // Default to step 1 if there's an error
             }
 
       - name: Update README if necessary
         run: |
           target_step=${{ steps.project_state.outputs.target_step }}
           current_step=${{ env.CURRENT_STEP }}
+          echo "Target step: $target_step"
+          
           if [ -z "$current_step" ] || [ "$current_step" != "$target_step" ]; then
+            echo "Updating README from step $current_step to step $target_step"
             cp steps/step${target_step}.md README.md
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
+            
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
             git add README.md
             git commit -m "Update README to step ${target_step}"
             git push
+          else
+            echo "README is already at step $target_step. No update needed."
           fi
