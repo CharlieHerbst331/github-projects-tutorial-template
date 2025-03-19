@@ -1,9 +1,8 @@
-name: Step 1 to Step 2
+name: Complete Step 1
 
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [project-created]
+    description: 'Run this after completing Step 1 (Creating a Project)'
 
 jobs:
   update:
@@ -30,3 +29,8 @@ jobs:
           git add README.md
           git commit -m "Update README to step 2"
           git push
+          
+      - name: Already completed
+        if: ${{ env.CURRENT_STEP != '1' }}
+        run: |
+          echo "Step 1 has already been completed. Current step is ${{ env.CURRENT_STEP }}."
