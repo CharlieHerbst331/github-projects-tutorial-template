@@ -15,7 +15,7 @@ Your first task is to create a new Project for this repository.
 4. Name your project "My Learning Project"
 5. Click "Create"
 
-Once completed, go to the **Actions** tab and run the "Update Tutorial" workflow to proceed to the next step.
+Once completed, go to the **Actions** tab and run the "Complete Step 1" workflow to proceed to the next step.
 
 ### 📚 What are GitHub Projects?
 GitHub Projects is a customizable, flexible tool for planning and tracking work on GitHub. Projects provide a spreadsheet-like experience that can be customized to your needs, helping you organize tasks, track progress, and prioritize your work.
