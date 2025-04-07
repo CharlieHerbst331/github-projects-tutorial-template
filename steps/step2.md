@@ -18,7 +18,7 @@ Now that you have a project, let's customize it by adding some custom fields.
 4. Create a "Priority" field as a "Single select" with options: High, Medium, Low
 5. Add another field called "Effort" as a "Number" field
 
-Once completed, go to the **Actions** tab and run the "Update Tutorial" workflow to proceed to the next step.
+Once completed, go to the **Actions** tab and run the "Complete Step 2" workflow to proceed to the next step.
 
 ### 📚 Why Custom Fields Matter
 Custom fields help you track additional information about your tasks. They enable you to filter, sort, and group your items in ways that make sense for your workflow. Examples include priority levels, effort estimates, due dates, or custom categories.
