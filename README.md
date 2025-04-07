@@ -3,7 +3,7 @@
 Welcome to this interactive tutorial on GitHub Projects! This repository will guide you through creating and using GitHub Projects to manage your work.
 
 ## How This Works
-As you complete each step, this README will automatically update to show the next task. Follow along to learn GitHub Projects step by step.
+As you complete each step, go to the actions tab and run the corresponding complete step button. Follow along to learn GitHub Projects step by step.
 
 ## Step 1: Create Your First Project
 Your first task is to create a new Project for this repository.
